@@ -28,15 +28,15 @@ import {
   generateId,
   FORMATS,
   PLATFORMS,
-  THEMES,
-  THEME_LABELS,
   FORMAT_LABELS,
   PLATFORM_LABELS,
+  parseContentPillars,
+  getStrategyThemes,
   type ContentCard,
   type ContentFormat,
   type Platform,
-  type ContentTheme,
 } from "@/lib/stores/calendar-store"
+import { useStrategyStore } from "@/lib/stores/strategy-store"
 import {
   IconChevronLeft,
   IconChevronRight,
@@ -77,12 +77,29 @@ const PLATFORM_ICONS: Record<string, { icon: typeof IconBrandInstagram; color: s
   pinterest: { icon: IconBrandPinterest, color: "text-red-600" },
 }
 
-const THEME_COLORS: Record<string, { border: string; bg: string; dot: string }> = {
-  "ai-innovation": { border: "border-l-blue-500", bg: "bg-blue-500/5", dot: "bg-blue-500" },
-  "coffee-education": { border: "border-l-amber-500", bg: "bg-amber-500/5", dot: "bg-amber-500" },
-  lifestyle: { border: "border-l-rose-500", bg: "bg-rose-500/5", dot: "bg-rose-500" },
-  community: { border: "border-l-emerald-500", bg: "bg-emerald-500/5", dot: "bg-emerald-500" },
-  "behind-the-scenes": { border: "border-l-violet-500", bg: "bg-violet-500/5", dot: "bg-violet-500" },
+// Dynamic theme color palette — assigned by hashing theme id
+const THEME_COLOR_PALETTE = [
+  { border: "border-l-blue-500", bg: "bg-blue-500/5", dot: "bg-blue-500" },
+  { border: "border-l-amber-500", bg: "bg-amber-500/5", dot: "bg-amber-500" },
+  { border: "border-l-rose-500", bg: "bg-rose-500/5", dot: "bg-rose-500" },
+  { border: "border-l-emerald-500", bg: "bg-emerald-500/5", dot: "bg-emerald-500" },
+  { border: "border-l-violet-500", bg: "bg-violet-500/5", dot: "bg-violet-500" },
+  { border: "border-l-cyan-500", bg: "bg-cyan-500/5", dot: "bg-cyan-500" },
+  { border: "border-l-orange-500", bg: "bg-orange-500/5", dot: "bg-orange-500" },
+  { border: "border-l-indigo-500", bg: "bg-indigo-500/5", dot: "bg-indigo-500" },
+]
+
+function hashString(str: string): number {
+  let hash = 0
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) - hash + str.charCodeAt(i)) | 0
+  }
+  return Math.abs(hash)
+}
+
+function getThemeColor(theme: string) {
+  const idx = hashString(theme) % THEME_COLOR_PALETTE.length
+  return THEME_COLOR_PALETTE[idx]
 }
 
 // --- Card Component ---
@@ -99,7 +116,7 @@ function CalendarCard({
   const FormatIcon = FORMAT_ICONS[card.format] ?? IconPhoto
   const pmeta = PLATFORM_ICONS[card.platform] ?? PLATFORM_ICONS.instagram
   const PlatformIcon = pmeta.icon
-  const tcolors = THEME_COLORS[card.theme] ?? THEME_COLORS["ai-innovation"]
+  const tcolors = getThemeColor(card.theme)
 
   return (
     <div
@@ -229,15 +246,15 @@ function CardEditSheet({
         <Label>Theme</Label>
         <Select
           value={draft.theme}
-          onValueChange={(v) => setDraft({ ...draft, theme: v as ContentTheme })}
+          onValueChange={(v) => setDraft({ ...draft, theme: v })}
         >
           <SelectTrigger>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {THEMES.map((t) => (
-              <SelectItem key={t} value={t}>
-                {THEME_LABELS[t]}
+            {getStrategyThemes(brandId).map((t) => (
+              <SelectItem key={t.id} value={t.id}>
+                {t.label}
               </SelectItem>
             ))}
           </SelectContent>
@@ -317,6 +334,7 @@ export function ContentCalendar({ brandId }: { brandId: string }) {
   }
 
   const handleAddCard = (dateStr: string) => {
+    const themes = getStrategyThemes(brandId)
     const newCard: ContentCard = {
       id: generateId(),
       brandId,
@@ -324,7 +342,7 @@ export function ContentCalendar({ brandId }: { brandId: string }) {
       time: "12:00",
       format: "single-post",
       platform: "instagram",
-      theme: "ai-innovation",
+      theme: themes[0]?.id || "general",
       title: "New Post",
       status: "plan",
     }
@@ -378,14 +396,17 @@ export function ContentCalendar({ brandId }: { brandId: string }) {
 
       {/* Theme Legend */}
       <div className="flex flex-wrap gap-3 border-b px-4 py-2">
-        {Object.entries(THEME_COLORS).map(([key, style]) => (
-          <div key={key} className="flex items-center gap-1.5">
-            <span className={cn("size-2 rounded-full", style.dot)} />
-            <span className="text-[10px] text-muted-foreground">
-              {THEME_LABELS[key as ContentTheme] ?? key}
-            </span>
-          </div>
-        ))}
+        {getStrategyThemes(brandId).map((t) => {
+          const style = getThemeColor(t.id)
+          return (
+            <div key={t.id} className="flex items-center gap-1.5">
+              <span className={cn("size-2 rounded-full", style.dot)} />
+              <span className="text-[10px] text-muted-foreground">
+                {t.label}
+              </span>
+            </div>
+          )
+        })}
         <Badge variant="secondary" className="ml-auto text-[10px]">
           {cards.filter((c) => {
             const ws = format(weekStart, "yyyy-MM-dd")

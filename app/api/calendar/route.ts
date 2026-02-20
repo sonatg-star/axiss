@@ -9,7 +9,7 @@ const contentCardSchema = z.object({
       time: z.string().describe("Posting time HH:mm"),
       format: z.enum(["reel", "carousel", "single-post", "story"]),
       platform: z.enum(["instagram", "facebook", "tiktok", "linkedin", "pinterest", "x"]),
-      theme: z.enum(["ai-innovation", "coffee-education", "lifestyle", "community", "behind-the-scenes"]),
+      theme: z.string().describe("Content theme/pillar slug from strategy"),
       title: z.string().describe("Short, catchy content title"),
     })
   ),
@@ -20,7 +20,7 @@ const fieldSchema = z.object({
 })
 
 export async function POST(req: Request) {
-  const { action, brandName, brandDescription, strategy, startDate, endDate, postsPerDay, daysPerWeek, card, field, themes } = await req.json()
+  const { action, brandName, brandDescription, strategy, startDate, endDate, postsPerDay, daysPerWeek, card, field, themes, themeLabels } = await req.json()
 
   if (action === "generate-calendar") {
     const result = await generateObject({
@@ -33,7 +33,8 @@ ${strategy ? `Brand strategy context: ${strategy}` : ""}
 Generate a content calendar from ${startDate} to ${endDate}.
 - Schedule ${postsPerDay} posts per weekday${daysPerWeek < 7 ? `, ${daysPerWeek === 6 ? "1 post on Saturday, none on Sunday" : "no weekend posts"}` : " and 1-2 posts on weekends"}.
 - Distribute posts across different platforms and formats.
-- Use these content themes: ${themes?.join(", ") || "varied themes relevant to the brand"}.
+- Use ONLY these content theme slugs for the theme field: ${themes?.join(", ") || "general"}.
+${themeLabels ? `- Theme labels for context: ${themeLabels.join(", ")}.` : ""}
 - Vary posting times between 08:00 and 20:00.
 - Create catchy, specific titles for each post.
 

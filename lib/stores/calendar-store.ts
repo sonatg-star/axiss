@@ -21,12 +21,13 @@ export type Platform =
   | "pinterest"
   | "x"
 
-export type ContentTheme =
-  | "ai-innovation"
-  | "coffee-education"
-  | "lifestyle"
-  | "community"
-  | "behind-the-scenes"
+// Dynamic — derived from strategy content pillars
+export type ContentTheme = string
+
+export type ContentThemeInfo = {
+  id: string
+  label: string
+}
 
 export type CardStatus =
   | "plan"
@@ -84,21 +85,6 @@ type CalendarStore = {
 
 const FORMATS: ContentFormat[] = ["reel", "carousel", "single-post", "story"]
 const PLATFORMS: Platform[] = ["instagram", "tiktok", "linkedin", "x"]
-const THEMES: ContentTheme[] = [
-  "ai-innovation",
-  "coffee-education",
-  "lifestyle",
-  "community",
-  "behind-the-scenes",
-]
-
-const THEME_LABELS: Record<ContentTheme, string> = {
-  "ai-innovation": "AI & Innovation",
-  "coffee-education": "Coffee Education",
-  lifestyle: "Lifestyle & Aesthetics",
-  community: "Community & UGC",
-  "behind-the-scenes": "Behind the Scenes",
-}
 
 const FORMAT_LABELS: Record<ContentFormat, string> = {
   reel: "Reel",
@@ -114,6 +100,51 @@ const PLATFORM_LABELS: Record<Platform, string> = {
   linkedin: "LinkedIn",
   pinterest: "Pinterest",
   x: "X",
+}
+
+// --- Dynamic themes from strategy ---
+
+const DEFAULT_THEMES: ContentThemeInfo[] = [
+  { id: "educational", label: "Educational" },
+  { id: "promotional", label: "Promotional" },
+  { id: "engagement", label: "Engagement" },
+  { id: "behind-the-scenes", label: "Behind the Scenes" },
+  { id: "community", label: "Community" },
+]
+
+function slugify(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
+    .trim()
+}
+
+export function parseContentPillars(content: string): ContentThemeInfo[] {
+  if (!content || content === "Generating...") return DEFAULT_THEMES
+  const regex = /\*\*\d+\.\s*(.+?)\*\*/g
+  const themes: ContentThemeInfo[] = []
+  let match
+  while ((match = regex.exec(content)) !== null) {
+    const label = match[1].trim()
+    // Remove trailing percentage like "(30%)"
+    const cleanLabel = label.replace(/\s*\(\d+%?\)\s*$/, "").trim()
+    if (cleanLabel) {
+      themes.push({ id: slugify(cleanLabel), label: cleanLabel })
+    }
+  }
+  return themes.length > 0 ? themes : DEFAULT_THEMES
+}
+
+export function getStrategyThemes(brandId: string): ContentThemeInfo[] {
+  const strategy = useStrategyStore.getState().strategies[brandId]
+  if (!strategy) return DEFAULT_THEMES
+  const pillarsSection = strategy.sections.find(
+    (s) => s.id === "content-pillars"
+  )
+  if (!pillarsSection) return DEFAULT_THEMES
+  return parseContentPillars(pillarsSection.content)
 }
 
 const STATUS_PIPELINE: CardStatus[] = [
@@ -150,12 +181,11 @@ function generateId() {
 // --- Exports ---
 
 export {
-  THEME_LABELS,
   FORMAT_LABELS,
   PLATFORM_LABELS,
   FORMATS,
   PLATFORMS,
-  THEMES,
+  DEFAULT_THEMES,
   STATUS_PIPELINE,
   STATUS_LABELS,
   computeStatus,
@@ -205,47 +235,21 @@ export async function generateField(
 
 // --- Mock fallback for calendar generation ---
 
-const MOCK_TITLES: Record<ContentTheme, string[]> = {
-  "ai-innovation": [
-    "How AI Picks Your Perfect Brew",
-    "The Algorithm Behind Your Morning Cup",
-    "AI Taste Profiling: How It Works",
-    "Future of Coffee: AI Predictions",
-    "Smart Brewing 101",
-  ],
-  "coffee-education": [
-    "Single Origin vs Blend: The Debate",
-    "Water Temperature Matters More Than You Think",
-    "5 Brewing Methods Compared",
-    "Understanding Coffee Flavor Notes",
-    "The Journey from Bean to Cup",
-  ],
-  lifestyle: [
-    "Morning Routine: The Perfect Start",
-    "Your Workspace, Your Coffee",
-    "Weekend Brewing Vibes",
-    "Coffee & Productivity: The Link",
-    "Aesthetic Latte Art Moments",
-  ],
-  community: [
-    "Your Brew Stories: This Week",
-    "Fan Favorite Recipes Roundup",
-    "Community Pick of the Week",
-    "Meet Our Top Home Baristas",
-    "Share Your Coff AI Moment",
-  ],
-  "behind-the-scenes": [
-    "Inside Our Roasting Process",
-    "How We Source Our Beans",
-    "Team Tasting Session",
-    "Building the AI: Dev Diary",
-    "Sustainability in Action",
-  ],
-}
-
 const POSTING_TIMES = ["08:00", "10:30", "12:00", "14:30", "17:00", "19:00"]
 
+const MOCK_TITLE_TEMPLATES = [
+  (theme: string) => `${theme}: Getting Started`,
+  (theme: string) => `${theme} Deep Dive`,
+  (theme: string) => `Weekly ${theme} Roundup`,
+  (theme: string) => `${theme} Tips & Tricks`,
+  (theme: string) => `Best of ${theme}`,
+  (theme: string) => `${theme} Spotlight`,
+  (theme: string) => `Behind ${theme}`,
+  (theme: string) => `${theme} Q&A`,
+]
+
 function generateMockCards(brandId: string, startDate: Date): ContentCard[] {
+  const themes = getStrategyThemes(brandId)
   const cards: ContentCard[] = []
   const weekStart = startOfWeek(startDate, { weekStartsOn: 1 })
 
@@ -257,11 +261,10 @@ function generateMockCards(brandId: string, startDate: Date): ContentCard[] {
       const postsToday = isWeekend ? 1 : Math.floor(Math.random() * 2) + 2
 
       for (let post = 0; post < postsToday; post++) {
-        const theme = THEMES[Math.floor(Math.random() * THEMES.length)]
+        const themeInfo = themes[Math.floor(Math.random() * themes.length)]
         const format_ = FORMATS[Math.floor(Math.random() * FORMATS.length)]
         const platform = PLATFORMS[Math.floor(Math.random() * PLATFORMS.length)]
-        const titles = MOCK_TITLES[theme]
-        const title = titles[Math.floor(Math.random() * titles.length)]
+        const titleFn = MOCK_TITLE_TEMPLATES[Math.floor(Math.random() * MOCK_TITLE_TEMPLATES.length)]
         const time = POSTING_TIMES[Math.floor(Math.random() * POSTING_TIMES.length)]
 
         cards.push({
@@ -271,8 +274,8 @@ function generateMockCards(brandId: string, startDate: Date): ContentCard[] {
           time,
           format: format_,
           platform,
-          theme,
-          title,
+          theme: themeInfo.id,
+          title: titleFn(themeInfo.label),
           status: "plan",
         })
       }
@@ -350,6 +353,11 @@ export const useCalendarStore = create<CalendarStore>((set, get) => ({
       ? strategy.sections.map((s) => `${s.title}: ${s.content.slice(0, 200)}`).join("\n")
       : ""
 
+    // Get dynamic themes from strategy content pillars
+    const themes = getStrategyThemes(brandId)
+    const themeIds = themes.map((t) => t.id)
+    const themeLabels = themes.map((t) => t.label)
+
     set({ isGenerating: true })
 
     fetch("/api/calendar", {
@@ -364,7 +372,8 @@ export const useCalendarStore = create<CalendarStore>((set, get) => ({
         endDate,
         postsPerDay: settings.postsPerDay,
         daysPerWeek: settings.daysPerWeek,
-        themes: THEMES,
+        themes: themeIds,
+        themeLabels,
       }),
     })
       .then((res) => {

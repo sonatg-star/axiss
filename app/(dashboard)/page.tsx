@@ -5,6 +5,11 @@ import { useStrategyStore } from "@/lib/stores/strategy-store"
 import { useNavigationStore } from "@/lib/stores/navigation-store"
 import { StrategyChat } from "@/components/strategy-chat"
 import { StrategyDocument } from "@/components/strategy-document"
+import {
+  ResizablePanelGroup,
+  ResizablePanel,
+  ResizableHandle,
+} from "@/components/ui/resizable"
 import { ContentCalendar } from "@/components/content-calendar"
 import { ProductionView } from "@/components/production-view"
 import { PublishView } from "@/components/publish-view"
@@ -20,13 +25,16 @@ function StrategyView({ brandId }: { brandId: string }) {
   }
 
   return (
-    <div className="flex h-full flex-col">
-      <div className="min-h-0 flex-1 overflow-y-auto">
-        <StrategyDocument brandId={brandId} />
-      </div>
-      <div className="h-[350px] shrink-0 border-t">
-        <StrategyChat brandId={brandId} />
-      </div>
+    <div className="h-[calc(100dvh-6rem)] overflow-hidden">
+      <ResizablePanelGroup orientation="horizontal">
+        <ResizablePanel defaultSize={60} minSize={20} className="overflow-hidden">
+          <StrategyDocument brandId={brandId} />
+        </ResizablePanel>
+        <ResizableHandle withHandle />
+        <ResizablePanel defaultSize={40} minSize={15} className="overflow-hidden">
+          <StrategyChat brandId={brandId} />
+        </ResizablePanel>
+      </ResizablePanelGroup>
     </div>
   )
 }

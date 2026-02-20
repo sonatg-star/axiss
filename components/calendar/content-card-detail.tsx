@@ -1,25 +1,25 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useMemo } from "react"
 import {
   useCalendarStore,
   type ContentCard,
   type ContentFormat,
   type Platform,
-  type ContentTheme,
   type CardStatus,
-  THEME_LABELS,
   FORMAT_LABELS,
   PLATFORM_LABELS,
   STATUS_PIPELINE,
   STATUS_LABELS,
   FORMATS,
   PLATFORMS,
-  THEMES,
   computeStatus,
   generateField,
   generateId,
+  parseContentPillars,
+  getStrategyThemes,
 } from "@/lib/stores/calendar-store"
+import { useStrategyStore } from "@/lib/stores/strategy-store"
 import {
   Sheet,
   SheetContent,
@@ -119,6 +119,12 @@ export function ContentCardDetail({
   const updateCard = useCalendarStore((s) => s.updateCard)
   const deleteCard = useCalendarStore((s) => s.deleteCard)
   const duplicateCard = useCalendarStore((s) => s.duplicateCard)
+
+  // Dynamic themes from strategy content pillars
+  const pillarsContent = useStrategyStore(
+    (s) => s.strategies[brandId]?.sections.find((sec) => sec.id === "content-pillars")?.content
+  )
+  const themes = useMemo(() => parseContentPillars(pillarsContent || ""), [pillarsContent])
 
   // Local form state
   const [form, setForm] = useState<Partial<ContentCard>>({})
@@ -280,15 +286,15 @@ export function ContentCardDetail({
             <FieldGroup label="Theme">
               <Select
                 value={form.theme}
-                onValueChange={(v) => updateField("theme", v as ContentTheme)}
+                onValueChange={(v) => updateField("theme", v)}
               >
                 <SelectTrigger className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {THEMES.map((t) => (
-                    <SelectItem key={t} value={t}>
-                      {THEME_LABELS[t]}
+                  {themes.map((t) => (
+                    <SelectItem key={t.id} value={t.id}>
+                      {t.label}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -476,7 +482,8 @@ function StatusBadge({ status }: { status: CardStatus }) {
 
 // --- Helper to create a new empty card ---
 
-export function createEmptyCard(brandId: string, date: string): ContentCard {
+export function createEmptyCard(brandId: string, date: string, theme?: string): ContentCard {
+  const defaultTheme = theme || getStrategyThemes(brandId)[0]?.id || "general"
   return {
     id: generateId(),
     brandId,
@@ -484,7 +491,7 @@ export function createEmptyCard(brandId: string, date: string): ContentCard {
     time: "12:00",
     format: "single-post",
     platform: "instagram",
-    theme: "ai-innovation",
+    theme: defaultTheme,
     title: "New Content",
     status: "plan",
   }

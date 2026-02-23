@@ -1,4 +1,5 @@
 import { create } from "zustand"
+import { persist } from "zustand/middleware"
 import { useBrandStore } from "./brand-store"
 import { useChatStore } from "./chat-store"
 
@@ -131,7 +132,9 @@ const COFF_AI_STRATEGY: BrandStrategy = {
   createdAt: Date.now(),
 }
 
-export const useStrategyStore = create<StrategyStore>((set, get) => ({
+export const useStrategyStore = create<StrategyStore>()(
+  persist(
+    (set, get) => ({
   strategies: {
     "seed-coff-ai": COFF_AI_STRATEGY,
   },
@@ -319,4 +322,12 @@ export const useStrategyStore = create<StrategyStore>((set, get) => ({
       }
     })
   },
-}))
+    }),
+    {
+      name: "axis-strategies",
+      partialize: (state) => ({
+        strategies: state.strategies,
+      }),
+    }
+  )
+)

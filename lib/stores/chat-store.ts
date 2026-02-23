@@ -1,4 +1,5 @@
 import { create } from "zustand"
+import { persist } from "zustand/middleware"
 import { useBrandStore } from "./brand-store"
 
 export type ChatMode = "full-auto" | "manual"
@@ -220,7 +221,9 @@ async function streamAIResponse(
 
 // --- Store ---
 
-export const useChatStore = create<ChatStore>((set, get) => ({
+export const useChatStore = create<ChatStore>()(
+  persist(
+    (set, get) => ({
   sessions: {
     "seed-coff-ai": SEED_COFF_AI_SESSION,
   },
@@ -283,4 +286,17 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   selectOption: (brandId, option) => {
     get().sendMessage(brandId, option.label)
   },
-}))
+    }),
+    {
+      name: "axis-chat",
+      partialize: (state) => ({
+        sessions: Object.fromEntries(
+          Object.entries(state.sessions).map(([k, v]) => [
+            k,
+            { ...v, isTyping: false },
+          ])
+        ),
+      }),
+    }
+  )
+)

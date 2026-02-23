@@ -1,4 +1,5 @@
 import { create } from "zustand"
+import { persist } from "zustand/middleware"
 import {
   startOfWeek,
   endOfWeek,
@@ -292,7 +293,9 @@ function generateMockCards(brandId: string, startDate: Date): ContentCard[] {
 
 // --- Store ---
 
-export const useCalendarStore = create<CalendarStore>((set, get) => ({
+export const useCalendarStore = create<CalendarStore>()(
+  persist(
+    (set, get) => ({
   cards: {},
   currentDate: new Date(),
   view: "week",
@@ -500,7 +503,16 @@ export const useCalendarStore = create<CalendarStore>((set, get) => ({
 
     return newCard
   },
-}))
+    }),
+    {
+      name: "axis-calendar",
+      partialize: (state) => ({
+        cards: state.cards,
+        settings: state.settings,
+      }),
+    }
+  )
+)
 
 // --- Selector helpers ---
 

@@ -1,3 +1,4 @@
+import { auth } from "@/auth"
 import { anthropic } from "@ai-sdk/anthropic"
 import { generateObject } from "ai"
 import { z } from "zod"
@@ -16,6 +17,11 @@ const sectionSchema = z.object({
 })
 
 export async function POST(req: Request) {
+  const session = await auth()
+  if (!session?.user) {
+    return Response.json({ error: "Unauthorized" }, { status: 401 })
+  }
+
   try {
     const { brandName, brandDescription, chatHistory } = await req.json()
 

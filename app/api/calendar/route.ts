@@ -1,3 +1,4 @@
+import { auth } from "@/auth"
 import { anthropic } from "@ai-sdk/anthropic"
 import { generateObject } from "ai"
 import { z } from "zod"
@@ -20,6 +21,11 @@ const fieldSchema = z.object({
 })
 
 export async function POST(req: Request) {
+  const session = await auth()
+  if (!session?.user) {
+    return Response.json({ error: "Unauthorized" }, { status: 401 })
+  }
+
   const { action, brandName, brandDescription, strategy, startDate, endDate, postsPerDay, daysPerWeek, card, field, themes, themeLabels } = await req.json()
 
   if (action === "generate-calendar") {

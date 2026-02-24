@@ -6,7 +6,9 @@ import {
   IconPencil,
   IconTrash,
   IconAxisX,
+  IconLogout,
 } from "@tabler/icons-react"
+import { useSession, signOut } from "next-auth/react"
 import { useBrandStore } from "@/lib/stores/brand-store"
 import { AddBrandDialog } from "@/components/add-brand-dialog"
 import { EditBrandDialog } from "@/components/edit-brand-dialog"
@@ -85,6 +87,47 @@ function BrandItem({ brand }: { brand: Brand }) {
   )
 }
 
+function UserFooter() {
+  const { data: session } = useSession()
+
+  if (!session?.user) return null
+
+  return (
+    <SidebarMenu>
+      <SidebarMenuItem>
+        <DropdownMenu modal={false}>
+          <DropdownMenuTrigger asChild>
+            <SidebarMenuButton size="lg" tooltip={session.user.name ?? "Account"}>
+              {session.user.image ? (
+                <img
+                  src={session.user.image}
+                  alt=""
+                  className="size-7 shrink-0 rounded-full"
+                  referrerPolicy="no-referrer"
+                />
+              ) : (
+                <div className="bg-primary/10 text-primary flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold">
+                  {session.user.name?.[0]?.toUpperCase() ?? "U"}
+                </div>
+              )}
+              <div className="flex flex-col gap-0.5 leading-none overflow-hidden">
+                <span className="truncate text-sm font-medium">{session.user.name}</span>
+                <span className="truncate text-xs text-muted-foreground">{session.user.email}</span>
+              </div>
+            </SidebarMenuButton>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent side="top" align="start" className="w-56">
+            <DropdownMenuItem onSelect={() => signOut({ callbackUrl: "/login" })}>
+              <IconLogout className="size-4" />
+              Sign out
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </SidebarMenuItem>
+    </SidebarMenu>
+  )
+}
+
 export function AppSidebar() {
   const brands = useBrandStore((s) => s.brands)
 
@@ -135,6 +178,7 @@ export function AppSidebar() {
             <AddBrandDialog />
           </SidebarMenuItem>
         </SidebarMenu>
+        <UserFooter />
       </SidebarFooter>
 
       <SidebarRail />

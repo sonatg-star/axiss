@@ -1,7 +1,13 @@
+import { auth } from "@/auth"
 import { anthropic } from "@ai-sdk/anthropic"
 import { streamText } from "ai"
 
 export async function POST(req: Request) {
+  const session = await auth()
+  if (!session?.user) {
+    return Response.json({ error: "Unauthorized" }, { status: 401 })
+  }
+
   const { messages, brandName, brandDescription, mode } = await req.json()
 
   const systemPrompt =
